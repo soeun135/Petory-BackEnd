@@ -1,15 +1,20 @@
 {
   "properties": {
-    "memberId": {
-      "type": "long"
-    },
     "name": {
       "type": "text",
-      "analyzer": "member_search_analyzer"
+      "analyzer": "standard",
+      "fields": {
+        "partial": {
+          "type": "text",
+          "analyzer": "name_analyzer",
+          "search_analyzer": "standard"
+        }
+      }
     },
     "email": {
       "type": "text",
-      "analyzer": "member_search_analyzer"
+      "analyzer": "email_analyzer",
+      "search_analyzer": "standard"
     }
   }
 }

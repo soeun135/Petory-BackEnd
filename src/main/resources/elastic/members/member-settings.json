@@ -1,11 +1,51 @@
 {
+  "index": {
+    "max_ngram_diff": 10
+  },
   "analysis": {
+    "char_filter": {
+      "email_prefix_filter": {
+        "type": "pattern_replace",
+        "pattern": "@.*",
+        "replacement": ""
+      }
+    },
+    "tokenizer": {
+      "nori_user_tokenizer": {
+        "type": "nori_tokenizer",
+        "decompound_mode": "none"
+      }
+    },
+    "filter": {
+      "name_ngram": {
+        "type": "ngram",
+        "min_gram": 2,
+        "max_gram": 10
+      },
+      "email_edge_ngram": {
+        "type": "edge_ngram",
+        "min_gram": 3,
+        "max_gram": 20
+      }
+    },
     "analyzer": {
-      "member_search_analyzer": {
+      "name_analyzer": {
         "type": "custom",
+        "tokenizer": "keyword",
+        "filter": [
+          "lowercase",
+          "name_ngram"
+        ]
+      },
+      "email_analyzer": {
+        "type": "custom",
+        "char_filter": [
+          "email_prefix_filter"
+        ],
         "tokenizer": "standard",
         "filter": [
-          "lowercase"
+          "lowercase",
+          "email_edge_ngram"
         ]
       }
     }

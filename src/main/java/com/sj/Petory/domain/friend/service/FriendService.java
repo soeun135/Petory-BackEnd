@@ -1,5 +1,6 @@
 package com.sj.Petory.domain.friend.service;
 
+import com.sj.Petory.common.es.MemberDocument;
 import com.sj.Petory.common.es.MemberEsRepository;
 import com.sj.Petory.domain.friend.dto.FriendDetailResponse;
 import com.sj.Petory.domain.friend.dto.FriendListResponse;
@@ -25,6 +26,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,17 +49,46 @@ public class FriendService {
     private final CareGiverRepository careGiverRepository;
     private final MemberEsRepository memberEsRepository;
     private final NotificationService notificationService;
-
+    private final ElasticsearchOperations elasticsearchOperations;
 
     public Page<MemberSearchResponse> searchMember(
             final String keyword, final Pageable pageable) {
 
+        NativeQuery query = NativeQuery.builder()
+                .withQuery(q -> q
+                        .multiMatch(m -> m
+                                .query(keyword)
+                                .fields("name^2", "name.partial", "email")
+                        )
+                )
+                .withPageable(pageable)
+                .build();
 
-        return memberEsRepository.findByNameOrEmail(keyword, keyword, pageable)
-                .map(doc -> {
-                    return memberRepository.findById(doc.getMemberId())
-                            .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUND));
-                }).map(Member::toDto);
+        SearchHits<MemberDocument> searchHits = elasticsearchOperations.search(query, MemberDocument.class);
+
+        return PageableExecutionUtils.getPage(
+                searchHits.getSearchHits().stream()
+                        .map(SearchHit::getContent)
+                        .map(doc ->
+                        {
+                            log.info("ES에서 찾은 멤버 ID:{}, 이름:{}", doc.getMemberId(), doc.getName());
+
+                            return memberRepository.findById(doc.getMemberId())
+                                    .orElseThrow(() -> {
+                                        log.error("DB에 존재하지 않는 ID : {}", doc.getMemberId());
+                                        return new MemberException(ErrorCode.MEMBER_NOT_FOUND);
+                                    });
+                        })
+                        .map(Member::toDto)
+                        .toList(),
+                pageable,
+                searchHits::getTotalHits
+        );
+//        return memberEsRepository.findByNameOrEmail(keyword, keyword, pageable)
+//                .map(doc -> {
+//                    return memberRepository.findById(doc.getMemberId())
+//                            .orElseThrow(() -> new MemberException(ErrorCode.MEMBER_NOT_FOUND));
+//                }).map(Member::toDto);
     }
 
     public Boolean friendRequest(

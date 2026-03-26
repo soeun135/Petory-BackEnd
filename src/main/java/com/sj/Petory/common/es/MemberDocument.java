@@ -13,7 +13,7 @@ import org.springframework.data.elasticsearch.annotations.Setting;
 @Builder
 @Setting(settingPath = "/elastic/members/member-settings.json")
 @Mapping(mappingPath = "/elastic/members/member-mappings.json")
-@Document(indexName = "member")
+@Document(indexName = "members")
 public class MemberDocument {
 
     @Id

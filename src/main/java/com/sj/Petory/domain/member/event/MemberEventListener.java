@@ -52,7 +52,7 @@ public class MemberEventListener {
         documents.forEach(doc ->
                 br.operations(op -> op
                         .index(idx -> idx
-                                .index("member")
+                                .index("members")
                                 .id(doc.getMemberId().toString())
                                 .document(doc)
                         )
